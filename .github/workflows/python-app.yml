@@ -15,7 +15,11 @@ permissions:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['windows-latest', 'ubuntu-latest, 'macos-latest']
 
     steps:
     - uses: actions/checkout@v4
@@ -35,11 +39,11 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Package Application
-      uses: JackMcKew/pyinstaller-action-windows@main
-      with:
-        path: personnel
+      run: |
+        pip install pyinstaller
+        pyinstaller personnel/*.py
 
     - uses: actions/upload-artifact@v4
       with:
         name: SARassit-D4H-personnel
-        path: personnel/dist/windows
+        path: personnel/dist/*
