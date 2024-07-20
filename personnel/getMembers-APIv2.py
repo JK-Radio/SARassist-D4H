@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import re
 import requests
 import uuid
 import xml.etree.ElementTree as ET
@@ -19,12 +20,10 @@ def get_members():
         "Content-Type": "application/json"
     }
 
-    print(headers)
 
     # Make a GET request to the API endpoint
     response = requests.get(endpoint, headers=headers)
 
-    print(response)
 
     # Check if the request was successful
     if response.status_code == 200:
@@ -59,6 +58,18 @@ def generate_uuid_from_32bit_int(int_32):
 def initcap(key):
     return key[0].upper() + key[1:] if key else key
 
+def formatPhone(tel):
+    AREA_BOUNDARY = 3           # 800.6288737
+    SUBSCRIBER_SPLIT = 6        # 800628.8737
+    
+    tel = tel.removeprefix("1")     # remove leading +1, or 1
+    tel = re.sub("[ ()-+]", '', tel) # remove space, (), -
+
+    tel = (f"{tel[:AREA_BOUNDARY]}-"
+           f"{tel[AREA_BOUNDARY:SUBSCRIBER_SPLIT]}-{tel[SUBSCRIBER_SPLIT:]}")
+    return tel
+
+
 def transform_member(member):
     # Create a new dictionary to hold the transformed member
     transformed_member = {}
@@ -70,7 +81,7 @@ def transform_member(member):
             transformed_member['Callsign'] = value
         # Rename 'mobilephone' to 'Phone'
         elif key == 'mobilephone':
-            transformed_member['Phone'] = value
+            transformed_member['Phone'] = formatPhone(value)
         elif key == 'id':
             transformed_member['D4HID'] = value
             transformed_member['PersonID'] = generate_uuid_from_32bit_int(value)
@@ -88,12 +99,11 @@ def transform_member(member):
         first_emg_contact = member['emergency_contacts'][0]
         transformed_member['NOKName'] = first_emg_contact.get('name')
         transformed_member['NOKRelation'] = first_emg_contact.get('relation')
-        transformed_member['NOKPhone'] = first_emg_contact.get('phone')
+        transformed_member['NOKPhone'] = formatPhone(first_emg_contact.get('phone'))
 
     if 'Group' not in member:
       transformed_member['Group'] = GROUP
 
-    print("Creating ", transformed_member['Name'], "as a member of ",transformed_member['Group'])
     return transformed_member
 
 def write_members_to_csv(members, filename="members.csv"):
@@ -155,11 +165,13 @@ def update_xml_with_members(xml_filename, members):
         
         if member_element is None:
             # If the Personnel element does not exist, create a new one
+            print("Adding ", member_name, " to Team ", GROUP) 
             member_element = ET.SubElement(all_team_members, 'Personnel')
             id_element = ET.SubElement(member_element, 'ID')
             id_element.text = str(generate_uuid_from_32bit_int(member['D4HID']))
         else:
             # If the Personnel element exists, ensure the ID is not updated
+            print("Updating ", member_name, " on Team ", GROUP)
             id_element = member_element.find('ID')
             if id_element is None:
                 id_element = ET.SubElement(member_element, 'ID')
@@ -193,11 +205,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     API_KEY=args.token
     GROUP=args.group
-    print(args)
     
     try:
         members = get_members()
-        print(members)
+	
         transformed_members = [transform_member(member) for member in members]
         write_members_to_csv(transformed_members, 'members.csv')
         update_xml_with_members('mySARAssistOptions.xml', transformed_members)
