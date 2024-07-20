@@ -37,17 +37,10 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-        
-  package:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: batonogov/pyinstaller-windows:latest
-    - name: Build Applications on Windows 
-      run: |
-        echo "Creating Windows artifact"
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        cd ./personnel && pyinstaller --onefile getMembers-APIv2.py
-        cp ./dist/*.exe ../
+    - name: Package Application
+      uses: JackMcKew/pyinstaller-action-windows@main
+      with:
+        path: src
 
     - uses: actions/upload-artifact@v2
       with:
