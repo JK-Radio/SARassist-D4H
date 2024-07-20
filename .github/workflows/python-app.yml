@@ -38,9 +38,12 @@ jobs:
       run: |
         pytest
     - name: Package Application
-      uses: vednig/pyinstaller-action-windows@main
-      with:
-        path: ./
+      uses: batonogov/pyinstaller-windows:latest
+      run: |
+        echo "Creating Windows artifact"
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        cd ./personnel && pyinstaller --onefile getMembers-APIv2.py
+        cp ./dist/*.exe ../
 
     - uses: actions/upload-artifact@v2
       with:
