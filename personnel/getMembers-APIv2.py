@@ -41,6 +41,37 @@ def get_members():
         response.raise_for_status()
 
 
+def get_member_qualifications(member_id):
+    # Define the endpoint for fetching member qualifications
+    endpoint = f"{BASE_URL}/team/members/{member_id}/qualification-awards?state=current"
+
+    # Set up the headers with the API key for authentication
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # Make a GET request to the API endpoint
+    response = requests.get(endpoint, headers=headers)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON response
+        response_json = response.json()
+
+        # Check if 'data' key is present in the response
+        if 'data' in response_json:
+            qualifications = response_json['data']
+
+            return qualifications
+        else:
+            raise ValueError("Unexpected response structure: 'data' key not found")
+    else:
+        # If the request was not successful, raise an error with the status code
+        response.raise_for_status()
+
+
+
 def generate_uuid_from_32bit_int(int_32):
     # Ensure the input is a 32-bit integer
     if not (0 <= int_32 < 2**32):
@@ -69,6 +100,101 @@ def formatPhone(tel):
            f"{tel[AREA_BOUNDARY:SUBSCRIBER_SPLIT]}-{tel[SUBSCRIBER_SPLIT:]}")
     return tel
 
+def buildQualifications(member):
+
+    isGSAR=False
+    isGSTL=False
+    isSARM1=False
+    isSARM2=False
+    isFA7=False
+    isFA40=False
+    isFA70=False
+    isFABLS=False
+    isFAALS=False
+    isFR=False
+    isSWOP=False
+    isSWTCH=False
+    isSWADV=False
+    isROPE1=False
+    isROPE2=False
+    isROPETL=False
+    isOARTM=False
+    isOARTL=False
+    isTRACKA=False
+    isTRACKER=False
+    isTRACKADV=False
+    isMTN1=False
+    isMTN2=False
+    isMTN3=False
+    isORV=False
+    isPCOP=False
+    isAIRT=False
+    isK9=False
+    try:
+        for qualification in member:
+          if qualification['qualification']['id'] == 4834:
+            isGSAR=True
+          elif qualification['qualification']['id'] == 4836:
+            isGSTL=True
+          elif qualification['qualification']['id'] == 4838:
+            isSARM1=True
+          elif qualification['qualification']['id'] == 4839:
+            isSARM2=True
+          elif qualification['qualification']['id'] == 4822:
+            isFA7=True
+          elif qualification['qualification']['id'] == 4827:
+            isFA40=True
+          elif qualification['qualification']['id'] == 4824:
+            isFA70=True
+          elif qualification['qualification']['id'] == -1:
+            isFABLS=True
+          elif qualification['qualification']['id'] == -1:
+            isFAALS=True
+          elif qualification['qualification']['id'] == -1:
+            isFR=True
+          elif qualification['qualification']['id'] == 4845:
+            isSWOP=True
+          elif qualification['qualification']['id'] == 4846:
+            isSWTCH=True
+          elif qualification['qualification']['id'] == 4847:
+            isSWADV=True
+          elif qualification['qualification']['id'] == 6296:
+            isROPE1=True
+          elif qualification['qualification']['id'] == 6297:
+            isROPE2=True
+          elif qualification['qualification']['id'] == 4832:
+            isROPETL=True
+          elif qualification['qualification']['id'] == 4799:
+            isOARTM=True
+          elif qualification['qualification']['id'] == 4798:
+            isOARTL=True
+          elif qualification['qualification']['id'] == 4850:
+            isTRACKA=True
+          elif qualification['qualification']['id'] == 4851:
+            isTRACKER=True
+          elif qualification['qualification']['id'] == 4852:
+            isTRACKADV=True
+          elif qualification['qualification']['id'] == 4828:
+            isMTN1=True
+          elif qualification['qualification']['id'] == 4829:
+            isMTN2=True
+          elif qualification['qualification']['id'] == 4830:
+            isMTN3=True
+          elif qualification['qualification']['id'] == 4857:
+            isORV=True
+          elif qualification['qualification']['id'] == 4801:
+            isPCOP=True
+          elif qualification['qualification']['id'] == 4788:  #Hoist
+            isAIRT=True
+          elif qualification['qualification']['id'] == 4847:  #CFDL
+            isAIRT=True
+          elif qualification['qualification']['id'] == 4812:  #K9 Wilderness
+            isK9=True
+          elif qualification['qualification']['id'] == 4811:  #K9 Tracker
+            isK9=True
+    except Exception as e:
+      return "False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False"
+    return f"{isGSAR},{isGSTL},{isSARM1},{isSARM2},{isFA7},{isFA40},{isFA70},{isFABLS},{isFAALS},{isFR},{isSWOP},{isSWTCH},{isSWADV},{isROPE1},{isROPE2},{isROPETL},{isOARTM},{isOARTL},{isTRACKA},{isTRACKER},{isTRACKADV},{isMTN1},{isMTN2},{isMTN3},{isORV},{isPCOP},{isAIRT},{isK9}"
 
 def transform_member(member):
     # Create a new dictionary to hold the transformed member
@@ -105,6 +231,9 @@ def transform_member(member):
       transformed_member['Group'] = GROUP
 
     return transformed_member
+
+
+
 
 def write_members_to_csv(members, filename="members.csv"):
     # Check if members list is not empty
@@ -214,6 +343,12 @@ if __name__ == "__main__":
         members = get_members()
 	
         transformed_members = [transform_member(member) for member in members]
+        print(len(transformed_members))
+        for mq in range(len(transformed_members)):
+          member_id=transformed_members[mq-1]['D4HID']          
+          transformed_members[mq-1]['Endorcements']= get_member_qualifications(member_id)
+          transformed_members[mq-1]['Qualifications']=buildQualifications(transformed_members[mq-1]['Endorcements'])
+
         write_members_to_csv(transformed_members, 'members.csv')
         update_xml_with_members('mySARAssistOptions.xml', transformed_members)
     except Exception as e:
