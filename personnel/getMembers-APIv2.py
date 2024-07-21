@@ -169,6 +169,10 @@ def update_xml_with_members(xml_filename, members):
             member_element = ET.SubElement(all_team_members, 'Personnel')
             id_element = ET.SubElement(member_element, 'ID')
             id_element.text = str(generate_uuid_from_32bit_int(member['D4HID']))
+            qualifications = ET.SubElement(member_element, 'Qualifications')
+            for _ in range(28):
+              boolean_element = ET.SubElement(qualifications, "Boolean")
+              boolean_element.text = "False"
         else:
             # If the Personnel element exists, ensure the ID is not updated
             print("Updating ", member_name, " on Team ", GROUP)
