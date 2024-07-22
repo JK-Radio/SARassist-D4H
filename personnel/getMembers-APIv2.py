@@ -11,7 +11,7 @@ BASE_URL = "https://api.team-manager.ca.d4h.com/v2"
 
 def get_members():
     # Define the endpoint for fetching members
-    endpoint = f"{BASE_URL}/team/members"
+    endpoint = f"{BASE_URL}/team/members?status=Operational"
 
     # Set up the headers with the API key for authentication
     headers = {
@@ -82,6 +82,7 @@ def initcap(key):
     return key[0].upper() + key[1:] if key else key
 
 def formatPhone(tel):
+    #need to refacor this, it's NA Dialplan only
     AREA_BOUNDARY = 3           # 800.6288737
     SUBSCRIBER_SPLIT = 6        # 800628.8737
 
@@ -158,7 +159,7 @@ def buildQualifications(member):
             elif qualification_id == 4811:  # K9 Tracker
                 qualifications[27] = True
     except Exception as e:
-        return ""
+        print("error")
     return ",".join(map(str, qualifications))
 
 def transform_member(member):
@@ -215,9 +216,10 @@ def write_members_to_csv(members, filename="members.csv"):
             writer.writeheader()
 
             # Write the member data
-            for member in transformed_members:
+            for member in members:
                 writer.writerow(member)
-        print(f"Members have been written to {filename}")
+        if not args.quiet:
+          print(f"Members have been written to {filename}")
     else:
         print("No members to write to CSV")
 
@@ -233,12 +235,13 @@ def escape_xpath_string(value):
 
 def update_qualifications(qualifications_element, qualifications_str):
     qualifications_list = qualifications_str.split(",")
-    boolean_elements = qualifications_element.findall("Boolean")
+    boolean_elements = qualifications_element.findall("boolean")
 
         # Ensure there are exactly 28 boolean elements
-    if len(boolean_elements) != 28:
-        raise ValueError("The number of Boolean elements in the XML does not match the expected count of 28.")
+#    if len(boolean_elements) != 28:
+#        raise ValueError("The number of Boolean elements in the XML does not match the expected count of 28.")
     for i, boolean_value in enumerate(qualifications_list):
+        #print(f"i={0}, boolean_value={1}", i, boolean_value)
         boolean_elements[i].text = boolean_value.strip()
 
 
@@ -248,9 +251,9 @@ def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
     tree = ET.parse(xml_file)
     root = tree.getroot()
 
-    members_element = root.find(".//AllTeamMembers")
+    all_team_members = root.find(".//AllTeamMembers")
 
-    if members_element is None:
+    if all_team_members is None:
         raise ValueError("No <AllTeamMembers> element found in the XML")
 
     # Iterate over the members and update/add their information in the Personnel tag
@@ -265,26 +268,28 @@ def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
         person_element = all_team_members.find(f".//Personnel[Name={member_name_escaped}]")
         if person_element is None:
           # If the Personnel element does not exist, create a new one
-          print("Adding ", member_name, " to Team ", GROUP)
+          if not args.quiet:
+            print("Adding ", member_name, " to Team ", GROUP)
           person_element = ET.SubElement(all_team_members, 'Personnel')
           id_element = ET.SubElement(person_element, 'ID')
           id_element.text = str(generate_uuid_from_32bit_int(member['D4HID']))
-          qualifications = ET.SubElement(person_element, 'Qualifications')
+          qualifications = ET.SubElement(person_element, 'QualificationList')
           for _ in range(28):
-            boolean_element = ET.SubElement(qualifications, "Boolean")
+            boolean_element = ET.SubElement(qualifications, "boolean")
             boolean_element.text = "False"
-            for key, value in member.items():
-                if key == "Qualifications":
-                    qualifications_element = person_element.find("Qualifications")
-                    if qualifications_element is not None:
-                        update_qualifications(qualifications_element, value)
-                else:
-                    key_element = person_element.find(key)
-                    if key_element is not None:
-                        key_element.text = value
+          for key, value in member.items():
+            if key == "Qualifications":
+              qualifications_element = person_element.find("QualificationList")
+              if qualifications_element is not None:
+                update_qualifications(qualifications_element, value)
+              else:
+                key_element = person_element.find(key)
+                if key_element is not None:
+                  key_element.text = value
         else:
           # If the Personnel element exists, ensure the ID is not updated
-          print("Updating ", member_name, " on Team ", GROUP)
+          if not args.quiet:
+            print("Updating ", member_name, " on Team ", GROUP)
           id_element = person_element.find('ID')
           if id_element is None:
             id_element = ET.SubElement(person_element, 'ID')
@@ -299,8 +304,11 @@ def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
           elif key == 'mobilephone':
             key = 'Phone'
           elif  key == "Qualifications":
-            qualifications_element = person_element.find("Qualifications")
+            qualifications_element = person_element.find("QualificationList")
             if qualifications_element is not None:
+              for _ in range(28):
+                boolean_element = ET.SubElement(qualifications_element, "boolean")
+                boolean_element.text = "False"
               update_qualifications(qualifications_element, value)
           else:
             element = person_element.find(key)
@@ -309,13 +317,43 @@ def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
             element.text = str(value)
     # Save the updated XML tree to a file
     tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-    print(f"XML file '{xml_file}' has been updated with member information")
+    if not args.quiet:
+      print(f"XML file '{xml_file}' has been updated with member information")
+
+
+def prune_keys(json_obj, keys_to_keep):
+    """
+    Recursively filter a JSON object to keep only specified keys.
+
+    Parameters:
+    - json_obj: The JSON object (can be a dictionary or list) to filter.
+    - keys_to_keep: A list of keys to keep in the filtered JSON object.
+
+    Returns:
+    - The filtered JSON object.
+    """
+    if isinstance(json_obj, dict):
+        # Create a new dictionary with only the keys to keep
+        filtered_dict = {key: prune_keys(value, keys_to_keep) 
+                         for key, value in json_obj.items() if key in keys_to_keep}
+        return filtered_dict
+
+    elif isinstance(json_obj, list):
+        # Apply filtering to each element in the list
+        filtered_list = [prune_keys(item, keys_to_keep) for item in json_obj]
+        return filtered_list
+
+    else:
+        # Return the element as is if it's not a dictionary or list
+        return json_obj
 
 if __name__ == "__main__":
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Process member data and update XML file.' )
     parser.add_argument('-t', '--token', required=True, type=str, help='API key for authentication')
     parser.add_argument('-g', '--group', required=True, type=str, help='Group name to assign to members')
+    parser.add_argument('-q', '--quiet', action='store_true', help='Suppress output')
+    parser.add_argument('--full', action='store_true', help='Write all attributes (this may cause SAR Command Assit to not start, use with CAUTION') 
     args = parser.parse_args()
 
     global API_KEY, GROUP
@@ -324,16 +362,38 @@ if __name__ == "__main__":
 
 
     try:
+
+      if not args.quiet:
+        print("Contacting D4H")
+
       members = get_members()
+
+      if not args.quiet:
+        print(F"Got {len(members)} records")
+
       transformed_members = [transform_member(member) for member in members]
-      print(len(transformed_members))
       for mq in range(len(transformed_members)):
         member_id=transformed_members[mq-1]['D4HID']
+        if not args.quiet:
+           print(f"Contacting D4H for List of Qualifications for record {mq}")
         transformed_members[mq-1]['Endorcements']= get_member_qualifications(member_id)
         transformed_members[mq-1]['Qualifications']=buildQualifications(transformed_members[mq-1]['Endorcements'])
 
-      write_members_to_csv(transformed_members, 'members.csv')
-      update_xml_with_members('mySARAssistOptions.xml', transformed_members)
+      keys_to_keep = ["ID","Active","OpPeriod","LastUpdatedUTC","NumberOfPeople","NumberOfVehicles","UniqueIDNum","ParentResourceID","PersonID","D4HID","Name","Group","QualificationList","Callsign","Phone","SpecialSkills","isAssignmentTeamLeader","SignedInToTask","OrganizationID","UserID","MemberActive","Email","CreatedByOrgID","Address","NOKName","NOKRelation","NOKPhone","Dietary","Vegetarian","NoGluten","Qualifications"]
+
+      if not args.full:
+        filtered_members=prune_keys(transformed_members,keys_to_keep)
+      else:
+        filtered_members=transformed_members
+
+      if not args.quiet:
+        print("Processing members.csv")
+      write_members_to_csv(filtered_members, 'members.csv')
+
+      if not args.quiet:
+        print("Processing mySARAssistOptions.xml")
+      update_xml_with_members(filtered_members, 'mySARAssistOptions.xml')
+
     except Exception as e:
       print(f"An error occurred: {e}")
 
