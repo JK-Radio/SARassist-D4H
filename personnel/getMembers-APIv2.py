@@ -5,6 +5,7 @@ import re
 import requests
 import uuid
 import xml.etree.ElementTree as ET
+from orgs import orgs, teams
 
 # Define the base URL of the DH4 API
 BASE_URL = "https://api.team-manager.ca.d4h.com/v2"
@@ -165,7 +166,6 @@ def buildQualifications(member):
 def transform_member(member):
     # Create a new dictionary to hold the transformed member
     transformed_member = {}
-
     # Copy all fields except 'permission' and 'emergency_contacts'
     for key, value in member.items():
         # Rename 'ref' to 'Callsign'
@@ -195,6 +195,8 @@ def transform_member(member):
 
     if 'Group' not in member:
         transformed_member['Group'] = GROUP
+    if 'OrganizationID'  not in member:
+        transformed_member['OrganizationID'] = team['id']
 
     return transformed_member
 
@@ -347,6 +349,15 @@ def prune_keys(json_obj, keys_to_keep):
         # Return the element as is if it's not a dictionary or list
         return json_obj
 
+
+def get_entity_by_name(json_array, target_name):
+    target_name_lower = target_name.lower()
+    for item in json_array:
+        if item.get("name", "").lower() == target_name_lower:
+            return item
+    return None
+
+
 if __name__ == "__main__":
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Process member data and update XML file.' )
@@ -359,6 +370,16 @@ if __name__ == "__main__":
     global API_KEY, GROUP
     API_KEY=args.token
     GROUP=args.group
+
+    global team
+    team = get_entity_by_name(teams,GROUP)
+
+    if team is None:
+      print(f"Group {GROUP} Not Found")
+      exit(1)
+    else:
+      if not args.quiet:
+        print (f"OrganizationID {team['id']} for {team['name']} found")
 
 
     try:
