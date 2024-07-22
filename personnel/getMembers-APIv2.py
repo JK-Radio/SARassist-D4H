@@ -160,7 +160,7 @@ def buildQualifications(member):
                 qualifications[27] = True
     except Exception as e:
         print("error")
-    return ",".join(map(str, qualifications))
+    return ",".join(map(str, qualifications)).lower()
 
 def transform_member(member):
     # Create a new dictionary to hold the transformed member
@@ -276,7 +276,7 @@ def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
           qualifications = ET.SubElement(person_element, 'QualificationList')
           for _ in range(28):
             boolean_element = ET.SubElement(qualifications, "boolean")
-            boolean_element.text = "False"
+            boolean_element.text = "false"
           for key, value in member.items():
             if key == "Qualifications":
               qualifications_element = person_element.find("QualificationList")
@@ -308,7 +308,7 @@ def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
             if qualifications_element is not None:
               for _ in range(28):
                 boolean_element = ET.SubElement(qualifications_element, "boolean")
-                boolean_element.text = "False"
+                boolean_element.text = "false"
               update_qualifications(qualifications_element, value)
           else:
             element = person_element.find(key)
