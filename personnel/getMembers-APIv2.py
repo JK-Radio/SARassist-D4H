@@ -373,11 +373,11 @@ if __name__ == "__main__":
 
       transformed_members = [transform_member(member) for member in members]
       for mq in range(len(transformed_members)):
-        member_id=transformed_members[mq-1]['D4HID']
+        member_id=transformed_members[mq]['D4HID']
         if not args.quiet:
-           print(f"Contacting D4H for List of Qualifications for record {mq}")
-        transformed_members[mq-1]['Endorcements']= get_member_qualifications(member_id)
-        transformed_members[mq-1]['Qualifications']=buildQualifications(transformed_members[mq-1]['Endorcements'])
+           print(f"Contacting D4H for List of Qualifications for record {mq +1}")
+        transformed_members[mq]['Endorcements']= get_member_qualifications(member_id)
+        transformed_members[mq]['Qualifications']=buildQualifications(transformed_members[mq]['Endorcements'])
 
       keys_to_keep = ["ID","Active","OpPeriod","LastUpdatedUTC","NumberOfPeople","NumberOfVehicles","UniqueIDNum","ParentResourceID","PersonID","D4HID","Name","Group","QualificationList","Callsign","Phone","SpecialSkills","isAssignmentTeamLeader","SignedInToTask","OrganizationID","UserID","MemberActive","Email","CreatedByOrgID","Address","NOKName","NOKRelation","NOKPhone","Dietary","Vegetarian","NoGluten","Qualifications"]
 
