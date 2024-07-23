@@ -10,63 +10,81 @@ from orgs import orgs, teams
 # Define the base URL of the DH4 API
 BASE_URL = "https://api.team-manager.ca.d4h.com/v2"
 
+
 def get_members():
-    # Define the endpoint for fetching members
+    """
+    Retreve all of the Operational members that a given token has access to
+
+    Parameters:
+    - None
+
+    Returns:
+    - A JSON object containing the output of the API call.
+    """
+
     endpoint = f"{BASE_URL}/team/members?status=Operational"
-
-    # Set up the headers with the API key for authentication
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    # Make a GET request to the API endpoint
+    headers = {"Authorization": f"Bearer {API_KEY}",
+               "Content-Type": "application/json"}
     response = requests.get(endpoint, headers=headers)
 
-    # Check if the request was successful
     if response.status_code == 200:
-        # Parse the JSON response
         response_json = response.json()
 
         # Check if 'data' key is present in the response
-        if 'data' in response_json:
-            members = response_json['data']
+        if "data" in response_json:
+            members = response_json["data"]
             return members
         else:
-            raise ValueError("Unexpected response structure: 'data' key not found")
+            raise ValueError(
+                "Unexpected response structure: 'data' key not found")
     else:
         # If the request was not successful, raise an error with the status code
         response.raise_for_status()
 
+
 def get_member_qualifications(member_id):
-    # Define the endpoint for fetching member qualifications
+    """
+    Retreve all of the Current qualifications a member has
+
+    Parameters:
+    - None
+
+    Returns:
+    - A JSON object containing the output of the API call.
+    """
+
     endpoint = f"{BASE_URL}/team/members/{member_id}/qualification-awards?state=current"
-
-    # Set up the headers with the API key for authentication
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    # Make a GET request to the API endpoint
+    headers = {"Authorization": f"Bearer {API_KEY}",
+               "Content-Type": "application/json"}
     response = requests.get(endpoint, headers=headers)
 
-    # Check if the request was successful
     if response.status_code == 200:
         # Parse the JSON response
         response_json = response.json()
 
         # Check if 'data' key is present in the response
-        if 'data' in response_json:
-            qualifications = response_json['data']
+        if "data" in response_json:
+            qualifications = response_json["data"]
             return qualifications
         else:
-            raise ValueError("Unexpected response structure: 'data' key not found")
+            raise ValueError(
+                "Unexpected response structure: 'data' key not found")
     else:
         # If the request was not successful, raise an error with the status code
         response.raise_for_status()
 
+
 def generate_uuid_from_32bit_int(int_32):
+    """
+    generate a UUID from an int32
+
+    Parameters:
+    - int32
+
+    Returns:
+    - A 128bit UUID formated str
+    """
+
     # Ensure the input is a 32-bit integer
     if not (0 <= int_32 < 2**32):
         raise ValueError("The input must be a 32-bit integer")
@@ -79,26 +97,51 @@ def generate_uuid_from_32bit_int(int_32):
 
     return uuid_str
 
+
 def initcap(key):
+    """
+    Capitizes the first Letter of a given str
+
+    Parameters:
+    - str
+
+    Returns:
+    - A str with the first character Capital
+    """
+
     return key[0].upper() + key[1:] if key else key
 
+
 def formatPhone(tel):
-    #need to refacor this, it's NA Dialplan only
-    AREA_BOUNDARY = 3           # 800.6288737
-    SUBSCRIBER_SPLIT = 6        # 800628.8737
+    """
+    Formats the passed in PhoneNumber to conform to a Northamerican DialPlan
+    Needs additional work to handel International calls.
+    Parameters:
+    - Phonenumber String
 
-    tel = tel.removeprefix("1")     # remove leading +1, or 1
-    tel = re.sub("[ ()-+]", '', tel) # remove space, (), -
+    Returns:
+    - A 3-3-4 Formatted string
+    """
 
-    tel = (f"{tel[:AREA_BOUNDARY]}-"
-           f"{tel[AREA_BOUNDARY:SUBSCRIBER_SPLIT]}-{tel[SUBSCRIBER_SPLIT:]}")
+    # need to refacor this, it's NA Dialplan only
+    AREA_BOUNDARY = 3  # 800.6288737
+    SUBSCRIBER_SPLIT = 6  # 800628.8737
+
+    tel = tel.removeprefix("1")  # remove leading +1, or 1
+    tel = re.sub("[ ()-+]", "", tel)  # remove space, (), -
+
+    tel = (
+        f"{tel[:AREA_BOUNDARY]}-"
+        f"{tel[AREA_BOUNDARY:SUBSCRIBER_SPLIT]}-{tel[SUBSCRIBER_SPLIT:]}"
+    )
     return tel
+
 
 def buildQualifications(member):
     qualifications = [False] * 28
     try:
         for qualification in member:
-            qualification_id = qualification['qualification']['id']
+            qualification_id = qualification["qualification"]["id"]
             if qualification_id == 4834:
                 qualifications[0] = True
             elif qualification_id == 4836:
@@ -163,42 +206,46 @@ def buildQualifications(member):
         print("error")
     return ",".join(map(str, qualifications)).lower()
 
+
 def transform_member(member):
     # Create a new dictionary to hold the transformed member
     transformed_member = {}
     # Copy all fields except 'permission' and 'emergency_contacts'
     for key, value in member.items():
         # Rename 'ref' to 'Callsign'
-        if key == 'ref':
-            transformed_member['Callsign'] = value
+        if key == "ref":
+            transformed_member["Callsign"] = value
         # Rename 'mobilephone' to 'Phone'
-        elif key == 'mobilephone':
-            transformed_member['Phone'] = formatPhone(value)
-        elif key == 'id':
-            transformed_member['D4HID'] = value
-            transformed_member['PersonID'] = generate_uuid_from_32bit_int(value)
-        elif key == 'name':
-            transformed_member['Name'] = value
-        elif key == 'email':
-            transformed_member['Email'] = value
-        elif key == 'address':
-            transformed_member['Address'] = value
-        elif key.lower() != 'permission' and key != 'emergency_contacts':
+        elif key == "mobilephone":
+            transformed_member["Phone"] = formatPhone(value)
+        elif key == "id":
+            transformed_member["D4HID"] = value
+            transformed_member["PersonID"] = generate_uuid_from_32bit_int(
+                value)
+        elif key == "name":
+            transformed_member["Name"] = value
+        elif key == "email":
+            transformed_member["Email"] = value
+        elif key == "address":
+            transformed_member["Address"] = value
+        elif key.lower() != "permission" and key != "emergency_contacts":
             transformed_member[key] = value
 
     # Extract the first emergency contact, and append to the dict
-    if 'emergency_contacts' in member and member['emergency_contacts']:
-        first_emg_contact = member['emergency_contacts'][0]
-        transformed_member['NOKName'] = first_emg_contact.get('name')
-        transformed_member['NOKRelation'] = first_emg_contact.get('relation')
-        transformed_member['NOKPhone'] = formatPhone(first_emg_contact.get('phone'))
+    if "emergency_contacts" in member and member["emergency_contacts"]:
+        first_emg_contact = member["emergency_contacts"][0]
+        transformed_member["NOKName"] = first_emg_contact.get("name")
+        transformed_member["NOKRelation"] = first_emg_contact.get("relation")
+        transformed_member["NOKPhone"] = formatPhone(
+            first_emg_contact.get("phone"))
 
-    if 'Group' not in member:
-        transformed_member['Group'] = GROUP
-    if 'OrganizationID'  not in member:
-        transformed_member['OrganizationID'] = team['id']
+    if "Group" not in member:
+        transformed_member["Group"] = GROUP
+    if "OrganizationID" not in member:
+        transformed_member["OrganizationID"] = team["id"]
 
     return transformed_member
+
 
 def write_members_to_csv(members, filename="members.csv"):
     # Check if members list is not empty
@@ -208,10 +255,10 @@ def write_members_to_csv(members, filename="members.csv"):
         keys = members[0].keys() if members else []
 
         # Exclude 'permission' from keys if present
-        keys = [key for key in keys if key.lower() != 'permission']
+        keys = [key for key in keys if key.lower() != "permission"]
 
         # Open a file for writing
-        with open(filename, mode='w', newline='', encoding='utf-8') as file:
+        with open(filename, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=keys)
 
             # Write the header
@@ -221,9 +268,10 @@ def write_members_to_csv(members, filename="members.csv"):
             for member in members:
                 writer.writerow(member)
         if not args.quiet:
-          print(f"Members have been written to {filename}")
+            print(f"Members have been written to {filename}")
     else:
         print("No members to write to CSV")
+
 
 def escape_xpath_string(value):
     # Handle cases with both single and double quotes
@@ -235,18 +283,17 @@ def escape_xpath_string(value):
     else:
         return f"'{value}'"
 
+
 def update_qualifications(qualifications_element, qualifications_str):
     qualifications_list = qualifications_str.split(",")
     boolean_elements = qualifications_element.findall("boolean")
 
-        # Ensure there are exactly 28 boolean elements
-#    if len(boolean_elements) != 28:
-#        raise ValueError("The number of Boolean elements in the XML does not match the expected count of 28.")
+    # Ensure there are exactly 28 boolean elements
+    #    if len(boolean_elements) != 28:
+    #        raise ValueError("The number of Boolean elements in the XML does not match the expected count of 28.")
     for i, boolean_value in enumerate(qualifications_list):
-        #print(f"i={0}, boolean_value={1}", i, boolean_value)
+        # print(f"i={0}, boolean_value={1}", i, boolean_value)
         boolean_elements[i].text = boolean_value.strip()
-
-
 
 
 def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
@@ -262,65 +309,76 @@ def update_xml_with_members(members, xml_file="mySARAssistOptions.xml"):
     for member in members:
         # Ensure 'D4HID' field is present
 
-        member_name = member['Name']
+        member_name = member["Name"]
         # Escape member name for XPath
         member_name_escaped = escape_xpath_string(member_name)
-        member_element = all_team_members.find(f".//Personnel[Name={member_name_escaped}]")
+        member_element = all_team_members.find(
+            f".//Personnel[Name={member_name_escaped}]"
+        )
 
-        person_element = all_team_members.find(f".//Personnel[Name={member_name_escaped}]")
+        person_element = all_team_members.find(
+            f".//Personnel[Name={member_name_escaped}]"
+        )
         if person_element is None:
-          # If the Personnel element does not exist, create a new one
-          if not args.quiet:
-            print("Adding ", member_name, " to Team ", GROUP)
-          person_element = ET.SubElement(all_team_members, 'Personnel')
-          id_element = ET.SubElement(person_element, 'ID')
-          id_element.text = str(generate_uuid_from_32bit_int(member['D4HID']))
-          qualifications = ET.SubElement(person_element, 'QualificationList')
-          for _ in range(28):
-            boolean_element = ET.SubElement(qualifications, "boolean")
-            boolean_element.text = "false"
-          for key, value in member.items():
-            if key == "Qualifications":
-              qualifications_element = person_element.find("QualificationList")
-              if qualifications_element is not None:
-                update_qualifications(qualifications_element, value)
-              else:
-                key_element = person_element.find(key)
-                if key_element is not None:
-                  key_element.text = value
+            # If the Personnel element does not exist, create a new one
+            if not args.quiet:
+                print("Adding ", member_name, " to Team ", GROUP)
+            person_element = ET.SubElement(all_team_members, "Personnel")
+            id_element = ET.SubElement(person_element, "ID")
+            id_element.text = str(
+                generate_uuid_from_32bit_int(member["D4HID"]))
+            qualifications = ET.SubElement(person_element, "QualificationList")
+            for _ in range(28):
+                boolean_element = ET.SubElement(qualifications, "boolean")
+                boolean_element.text = "false"
+            for key, value in member.items():
+                if key == "Qualifications":
+                    qualifications_element = person_element.find(
+                        "QualificationList")
+                    if qualifications_element is not None:
+                        update_qualifications(qualifications_element, value)
+                    else:
+                        key_element = person_element.find(key)
+                        if key_element is not None:
+                            key_element.text = value
         else:
-          # If the Personnel element exists, ensure the ID is not updated
-          if not args.quiet:
-            print("Updating ", member_name, " on Team ", GROUP)
-          id_element = person_element.find('ID')
-          if id_element is None:
-            id_element = ET.SubElement(person_element, 'ID')
-            id_element.text = str(generate_uuid_from_32bit_int(member['D4HID']))
+            # If the Personnel element exists, ensure the ID is not updated
+            if not args.quiet:
+                print("Updating ", member_name, " on Team ", GROUP)
+            id_element = person_element.find("ID")
+            if id_element is None:
+                id_element = ET.SubElement(person_element, "ID")
+                id_element.text = str(
+                    generate_uuid_from_32bit_int(member["D4HID"]))
         # Update or add the fields in the Personnel element
         for key, value in member.items():
-          if key.lower() == 'permission' or key == 'ID':
-            continue  # Skip the 'permission' and 'ID' fields
-          # Rename 'ref' to 'Callsign' and 'mobilephone' to 'Phone'
-          if key == 'ref':
-            key = 'Callsign'
-          elif key == 'mobilephone':
-            key = 'Phone'
-          elif  key == "Qualifications":
-            qualifications_element = person_element.find("QualificationList")
-            if qualifications_element is not None:
-              for _ in range(28):
-                boolean_element = ET.SubElement(qualifications_element, "boolean")
-                boolean_element.text = "false"
-              update_qualifications(qualifications_element, value)
-          else:
-            element = person_element.find(key)
-            if element is None:
-              element = ET.SubElement(person_element, key)
-            element.text = str(value)
+            if key.lower() == "permission" or key == "ID":
+                continue  # Skip the 'permission' and 'ID' fields
+            # Rename 'ref' to 'Callsign' and 'mobilephone' to 'Phone'
+            if key == "ref":
+                key = "Callsign"
+            elif key == "mobilephone":
+                key = "Phone"
+            elif key == "Qualifications":
+                qualifications_element = person_element.find(
+                    "QualificationList")
+                if qualifications_element is not None:
+                    for _ in range(28):
+                        boolean_element = ET.SubElement(
+                            qualifications_element, "boolean"
+                        )
+                        boolean_element.text = "false"
+                    update_qualifications(qualifications_element, value)
+            else:
+                element = person_element.find(key)
+                if element is None:
+                    element = ET.SubElement(person_element, key)
+                element.text = str(value)
     # Save the updated XML tree to a file
     tree.write(xml_file, encoding="utf-8", xml_declaration=True)
     if not args.quiet:
-      print(f"XML file '{xml_file}' has been updated with member information")
+        print(
+            f"XML file '{xml_file}' has been updated with member information")
 
 
 def prune_keys(json_obj, keys_to_keep):
@@ -336,8 +394,11 @@ def prune_keys(json_obj, keys_to_keep):
     """
     if isinstance(json_obj, dict):
         # Create a new dictionary with only the keys to keep
-        filtered_dict = {key: prune_keys(value, keys_to_keep) 
-                         for key, value in json_obj.items() if key in keys_to_keep}
+        filtered_dict = {
+            key: prune_keys(value, keys_to_keep)
+            for key, value in json_obj.items()
+            if key in keys_to_keep
+        }
         return filtered_dict
 
     elif isinstance(json_obj, list):
@@ -360,61 +421,107 @@ def get_entity_by_name(json_array, target_name):
 
 if __name__ == "__main__":
     # Set up argument parser
-    parser = argparse.ArgumentParser(description='Process member data and update XML file.' )
-    parser.add_argument('-t', '--token', required=True, type=str, help='API key for authentication')
-    parser.add_argument('-g', '--group', required=True, type=str, help='Group name to assign to members')
-    parser.add_argument('-q', '--quiet', action='store_true', help='Suppress output')
-    parser.add_argument('--full', action='store_true', help='Write all attributes (this may cause SAR Command Assit to not start, use with CAUTION') 
+    parser = argparse.ArgumentParser(
+        description="Process member data and update XML file."
+    )
+    parser.add_argument(
+        "-t", "--token", required=True, type=str, help="API key for authentication"
+    )
+    parser.add_argument(
+        "-g", "--group", required=True, type=str, help="Group name to assign to members"
+    )
+    parser.add_argument("-q", "--quiet", action="store_true",
+                        help="Suppress output")
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Write all attributes (this may cause SAR Command Assit to not start, use with CAUTION",
+    )
     args = parser.parse_args()
 
     global API_KEY, GROUP
-    API_KEY=args.token
-    GROUP=args.group
+    API_KEY = args.token
+    GROUP = args.group
 
     global team
-    team = get_entity_by_name(teams,GROUP)
+    team = get_entity_by_name(teams, GROUP)
 
     if team is None:
-      print(f"Group {GROUP} Not Found")
-      exit(1)
+        print(f"Group {GROUP} Not Found")
+        exit(1)
     else:
-      if not args.quiet:
-        print (f"OrganizationID {team['id']} for {team['name']} found")
-
+        if not args.quiet:
+            print(f"OrganizationID {team['id']} for {team['name']} found")
 
     try:
 
-      if not args.quiet:
-        print("Contacting D4H")
-
-      members = get_members()
-
-      if not args.quiet:
-        print(F"Got {len(members)} records")
-
-      transformed_members = [transform_member(member) for member in members]
-      for mq in range(len(transformed_members)):
-        member_id=transformed_members[mq]['D4HID']
         if not args.quiet:
-           print(f"Contacting D4H for List of Qualifications for record {mq +1}")
-        transformed_members[mq]['Endorcements']= get_member_qualifications(member_id)
-        transformed_members[mq]['Qualifications']=buildQualifications(transformed_members[mq]['Endorcements'])
+            print("Contacting D4H")
 
-      keys_to_keep = ["ID","Active","OpPeriod","LastUpdatedUTC","NumberOfPeople","NumberOfVehicles","UniqueIDNum","ParentResourceID","PersonID","D4HID","Name","Group","QualificationList","Callsign","Phone","SpecialSkills","isAssignmentTeamLeader","SignedInToTask","OrganizationID","UserID","MemberActive","Email","CreatedByOrgID","Address","NOKName","NOKRelation","NOKPhone","Dietary","Vegetarian","NoGluten","Qualifications"]
+        members = get_members()
 
-      if not args.full:
-        filtered_members=prune_keys(transformed_members,keys_to_keep)
-      else:
-        filtered_members=transformed_members
+        if not args.quiet:
+            print(f"Got {len(members)} records")
 
-      if not args.quiet:
-        print("Processing members.csv")
-      write_members_to_csv(filtered_members, 'members.csv')
+        transformed_members = [transform_member(member) for member in members]
+        for mq in range(len(transformed_members)):
+            member_id = transformed_members[mq]["D4HID"]
+            if not args.quiet:
+                print(
+                    f"Contacting D4H for List of Qualifications for record {mq +1}")
+            transformed_members[mq]["Endorcements"] = get_member_qualifications(
+                member_id
+            )
+            transformed_members[mq]["Qualifications"] = buildQualifications(
+                transformed_members[mq]["Endorcements"]
+            )
 
-      if not args.quiet:
-        print("Processing mySARAssistOptions.xml")
-      update_xml_with_members(filtered_members, 'mySARAssistOptions.xml')
+        keys_to_keep = [
+            "ID",
+            "Active",
+            "OpPeriod",
+            "LastUpdatedUTC",
+            "NumberOfPeople",
+            "NumberOfVehicles",
+            "UniqueIDNum",
+            "ParentResourceID",
+            "PersonID",
+            "D4HID",
+            "Name",
+            "Group",
+            "QualificationList",
+            "Callsign",
+            "Phone",
+            "SpecialSkills",
+            "isAssignmentTeamLeader",
+            "SignedInToTask",
+            "OrganizationID",
+            "UserID",
+            "MemberActive",
+            "Email",
+            "CreatedByOrgID",
+            "Address",
+            "NOKName",
+            "NOKRelation",
+            "NOKPhone",
+            "Dietary",
+            "Vegetarian",
+            "NoGluten",
+            "Qualifications",
+        ]
+
+        if not args.full:
+            filtered_members = prune_keys(transformed_members, keys_to_keep)
+        else:
+            filtered_members = transformed_members
+
+        if not args.quiet:
+            print("Processing members.csv")
+        write_members_to_csv(filtered_members, "members.csv")
+
+        if not args.quiet:
+            print("Processing mySARAssistOptions.xml")
+        update_xml_with_members(filtered_members, "mySARAssistOptions.xml")
 
     except Exception as e:
-      print(f"An error occurred: {e}")
-
+        print(f"An error occurred: {e}")
