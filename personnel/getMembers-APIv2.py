@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import os
 import re
 import requests
 import uuid
@@ -418,7 +419,6 @@ def get_entity_by_name(json_array, target_name):
             return item
     return None
 
-
 if __name__ == "__main__":
     # Set up argument parser
     parser = argparse.ArgumentParser(
@@ -431,11 +431,17 @@ if __name__ == "__main__":
         "-g", "--group", required=True, type=str, help="Group name to assign to members"
     )
     parser.add_argument("-q", "--quiet", action="store_true",
-                        help="Suppress output")
+                        help="Suppress chatty output")
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Write all attributes (this may cause SAR Command Assit to not start, use with CAUTION",
+        help="Write all attributes (this may cause SAR Command Assist to not start), use with CAUTION",
+    )
+    parser.add_argument(
+        "--xml",
+        type = str,
+        default = './mySARAssistOptions.xml',
+        help="path including filename to update, defaults to ./mySARAssistOptions.xml"
     )
     args = parser.parse_args()
 
@@ -516,12 +522,12 @@ if __name__ == "__main__":
             filtered_members = transformed_members
 
         if not args.quiet:
-            print("Processing members.csv")
-        write_members_to_csv(filtered_members, "members.csv")
+            print(f"Processing {str(os.path.dirname(args.xml) + '/members.csv')}")
+        write_members_to_csv(filtered_members, str(os.path.dirname(args.xml) + "/members.csv"))
 
         if not args.quiet:
-            print("Processing mySARAssistOptions.xml")
-        update_xml_with_members(filtered_members, "mySARAssistOptions.xml")
+            print(f"Processing {args.xml}")
+        update_xml_with_members(filtered_members, args.xml)
 
     except Exception as e:
         print(f"An error occurred: {e}")
