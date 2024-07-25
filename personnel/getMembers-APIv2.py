@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import json
 import os
 import re
 import requests
 import uuid
 import xml.etree.ElementTree as ET
-from orgs import orgs, teams
+import xmltodict
 
 # Define the base URL of the DH4 API
 BASE_URL = "https://api.team-manager.ca.d4h.com/v2"
+
+
 
 
 def get_members():
@@ -73,6 +76,33 @@ def get_member_qualifications(member_id):
     else:
         # If the request was not successful, raise an error with the status code
         response.raise_for_status()
+
+def get_soap_message_from_api():
+    # Make the request to the API
+    headers = {
+        "Content-Type" : "application/soap+xml; charset=utf-8",
+        "User-Agent"   : str(os.path.basename(__file__) + "/0.96.0-beta1"),
+        "Host"         : "sarassist.ca"
+    }
+    body = """<?xml version=\"1.0\" encoding=\"utf-8\"?>
+  <soap12:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap12=\"http://www.w3.org/2003/05/soap-envelope\">
+  <soap12:Body>
+    <GetAllOrganizations xmlns=\"https://www.sarassist.ca\" />
+  </soap12:Body>
+</soap12:Envelope>"""
+    response = requests.post("https://sarassist.ca/ICAUpdatesWebservice.asmx", headers=headers, data=body)
+    response.raise_for_status()
+    return response.text
+
+def soap_to_json(soap_message):
+    # Parse the XML SOAP message
+    soap_dict = xmltodict.parse(soap_message)
+    # Convert the dictionary to a JSON string
+    if ( soap_dict['soap:Envelope']['soap:Body']['GetAllOrganizationsResponse']['GetAllOrganizationsResult']['Organization'] ):
+      json_message = soap_dict['soap:Envelope']['soap:Body']['GetAllOrganizationsResponse']['GetAllOrganizationsResult']['Organization']
+    else:
+      json_message = None
+    return json_message
 
 
 def generate_uuid_from_32bit_int(int_32):
@@ -243,7 +273,7 @@ def transform_member(member):
     if "Group" not in member:
         transformed_member["Group"] = GROUP
     if "OrganizationID" not in member:
-        transformed_member["OrganizationID"] = team["id"]
+        transformed_member["OrganizationID"] = team["OrganizationID"]
 
     return transformed_member
 
@@ -415,7 +445,7 @@ def prune_keys(json_obj, keys_to_keep):
 def get_entity_by_name(json_array, target_name):
     target_name_lower = target_name.lower()
     for item in json_array:
-        if item.get("name", "").lower() == target_name_lower:
+        if item.get("OrganizationName", "").lower() == target_name_lower:
             return item
     return None
 
@@ -449,17 +479,21 @@ if __name__ == "__main__":
     API_KEY = args.token
     GROUP = args.group
 
-    global team
-    team = get_entity_by_name(teams, GROUP)
-
-    if team is None:
-        print(f"Group {GROUP} Not Found")
-        exit(1)
-    else:
-        if not args.quiet:
-            print(f"OrganizationID {team['id']} for {team['name']} found")
-
     try:
+        if not args.quiet:
+            print("Contacting sarassist.ca for the latest groups")
+        
+        teams = soap_to_json(get_soap_message_from_api())
+
+        global team
+        team = get_entity_by_name(teams, GROUP)
+        if team is None:
+            print(f"Group {GROUP} Not Found")
+            exit(1)
+        else:
+            if not args.quiet:
+                print(f"OrganizationID {team['OrganizationID']} for {team['OrganizationName']} found")
+
 
         if not args.quiet:
             print("Contacting D4H")
