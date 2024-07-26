@@ -1,5 +1,5 @@
-# SARassit-D4H
+# SARassist-D4H
 
-A collection of Utilities to help interface SAR Command Assitant with External services
+A collection of Utilities to help interface SAR Command Assistant with External services
 
 
