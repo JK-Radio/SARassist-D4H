@@ -8,4 +8,4 @@ usage:
 ./getMembers-APIv2.py --token <yourD4H_API_TOKEN --group "<your SAR GROUP>" 
 ```
 
-it is assumed that you have copied this file into the SARAssit documents folder. 
+it is assumed that you have copied this file into the SARAssist documents folder. 
