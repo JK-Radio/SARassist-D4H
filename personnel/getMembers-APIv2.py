@@ -98,8 +98,8 @@ def soap_to_json(soap_message):
     # Parse the XML SOAP message
     soap_dict = xmltodict.parse(soap_message)
     # Convert the dictionary to a JSON string
-    if ( soap_dict['soap:Envelope']['soap:Body']['GetAllOrganizationsResponse']['GetAllOrganizationsResult']['Organization'] ):
-      json_message = soap_dict['soap:Envelope']['soap:Body']['GetAllOrganizationsResponse']['GetAllOrganizationsResult']['Organization']
+    if ( soap_dict['soap:Envelope']['soap:Body']['GetAllOrganizationsResponse']['GetAllOrganizationsResult']['Result']['Organization'] ):
+      json_message = soap_dict['soap:Envelope']['soap:Body']['GetAllOrganizationsResponse']['GetAllOrganizationsResult']['Result']['Organization']
     else:
       json_message = None
     return json_message
