@@ -8,4 +8,4 @@ usage:
 getMembers-APIv2.py --token <yourD4H_API_TOKEN> --group "<your SAR GROUP>" --xml "C:\Users\COSAR\Documents\SAR Assist\mySARAssistOptions.xml"
 ```
 
-Where <your SAR GROUP> is exactly how it's Found in SAR Assist, and --xml is the full path to your SARAssistOptions  xml file.  
+Where "< your SAR GROUP >" is exactly how it's Found in SAR Assist, and --xml is the full path to your SARAssistOptions  xml file.  
