@@ -5,7 +5,7 @@ Utility to fetch all of the Teams OPERATIONAL members from D4H Team-Manager  and
 
 usage:
 ```
-./getMembers-APIv2.py --token <yourD4H_API_TOKEN --group "<your SAR GROUP>" 
+getMembers-APIv2.py --token <yourD4H_API_TOKEN> --group "<your SAR GROUP>" --xml "C:\Users\COSAR\Documents\SAR Assist\mySARAssistOptions.xml"
 ```
 
-it is assumed that you have copied this file into the SARAssist documents folder. 
+Where <your SAR GROUP> is exactly how it's Found in SAR Assist, and --xml is the full path to your SARAssistOptions  xml file.  
